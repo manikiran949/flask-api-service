@@ -1,19 +1,29 @@
 from flask import Flask
 import os
-from datetime import datetime
+import socket
 
 app = Flask(__name__)
 
 @app.route('/')
-def hello():
-    # Adding a timestamp and a color change to prove the update
-    now = datetime.now().strftime("%H:%M:%S")
+def home():
+    # Fetch system info 
+    pod_name = socket.gethostname()
+    app_version = os.getenv("APP_VERSION", "v1.0.0")
+    
     return f"""
-    <body style="background-color: #f0f8ff; font-family: sans-serif; text-align: center; padding-top: 50px;">
-        <h1>🚀 GitOps Update Successful!</h1>
-        <p><b>Last Deployed At:</b> {now}</p>
-        <p><b>Status:</b> Running on Kubernetes (Minikube)</p>
-    </body>
+    <html>
+        <head><title>Microservice Dashboard</title></head>
+        <body style="font-family: sans-serif; margin: 40px;">
+            <h2>🚀 GitOps Deployment Successful</h2>
+            <hr>
+            <p><strong>Status:</strong> Online</p>
+            <p><strong>Pod ID:</strong> {pod_name}</p>
+            <p><strong>Version:</strong> {app_version}</p>
+            <p><strong>Namespace:</strong> flask-api</p>
+            <hr>
+            <small>Automatically deployed via Argo CD</small>
+        </body>
+    </html>
     """
 
 if __name__ == "__main__":
