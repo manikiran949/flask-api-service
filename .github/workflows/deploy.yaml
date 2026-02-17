@@ -1,0 +1,38 @@
+name: Build & Deploy
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-push-update:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Docker Login
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build & Push
+      run: |
+        # Builds the image using the unique GitHub Commit ID as the tag
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/flask-api:${{ github.sha }} .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-api:${{ github.sha }}
+        
+    - name: Update Manifest
+      run: |
+        git config --global user.email "ci-bot@argocd.com"
+        git config --global user.name "CI Bot"
+        
+        # clones my Config repo using the Secret Token
+        git clone https://${{ secrets.GITOPS_PAT }}@github.com/${{ github.repository_owner }}/flask-api-cluster-config.git
+        cd flask-api-cluster-config
+        
+        # This searches for the image line and replaces it with the new version
+        sed -i "s|image: .*flask-api:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/flask-api:${{ github.sha }}|g" manifests/install.yaml
+        
+        git add .
+        git commit -m "chore: update image to ${{ github.sha }} [skip ci]"
+        git push
